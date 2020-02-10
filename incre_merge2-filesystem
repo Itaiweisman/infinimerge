@@ -1,0 +1,192 @@
+#!/usr/bin/sh
+#ibox='ibox2811'
+#ibox_user='iweisman'
+#lock_duration=1hours
+infinishell='/usr/bin/infinishell'
+#expose_dir=/INFINI/snaps
+#target_dir=/INFINI/target
+#snap_prefix='infinimerge'
+ts=`date +%H%M%d%m%Y`
+#nfs_ip='172.20.37.53'
+init=".init"
+use_cred_file="NO"
+solaris_mount_options="rw,bg,hard,nointr,rsize=32768,wsize=32768,proto=tcp,noac,vers=3,forcedirectio"
+
+check_fs_mounted() {
+dir=$1
+if [ `stat -c%d "$dir"` != `stat -c%d "$dir/.."` ]; then
+	# FS Mounted
+	$print_cmd 1
+	else
+	$print_cmd 0
+	fi
+
+}
+write_enable_snap() {
+    snap=$1
+    run_infinishell "fs.snap.write_enable snap=$snap"
+}
+dec_pass() {
+	file=$1
+	dec=`cat $file | base64 --decode`
+	$print_cmd $dec
+}
+run_infinishell() {
+	command=$@
+	if [ "$use_cred_file" == "YES" ] ; then
+	    creds="--user $ibox_user --password $p"
+	
+	else 
+	    creds=""
+	fi
+	cmd="$infinishell $ibox -c \"$command\" $creds --csv --no-paging --yes"
+	eval $cmd
+	if [ $? -ne 0 ] ;then
+		echo "infinishell command failed, aborting"
+		exit 2
+	fi
+}
+create_snap() {
+	fs=$1
+	lock=$2
+	fs_name=${target_prefix}_${fs}
+	operation=$2
+	if [ "$operation" == "expose" ] ; then
+		suffix=''
+		snap_name=${fs}_EXPOSED
+		fs_name=$fs
+	else
+	    #if [ ! -z "${lock_duration}" ] ; then 
+	    if [ $lock == "YES" ] ; then
+		suffix="lock_duration=${retention}days" ; fi
+		snap_name=${snap_prefix}_${fs}_${ts}
+	fi
+	run_infinishell "fs.snap.create fs=$fs_name name=${snap_name} $suffix"
+	set_metadata ${snap_name} host.created_by infinimerge
+	if [ "$set_retention" == "YES" ]; then
+	    set_metadata ${snap_name} retention ${retention}
+	fi
+}
+
+set_metadata() {
+    fs=$1
+    key=$2
+    value=$3
+    run_infinishell "metadata.set objtype=fs-snap object=$fs key=$key value=$value"
+}
+delete_snap() {
+    snap=$1
+    run_infinishell "fs.snap.delete  snap=$snap --yes"
+}
+list_snaps() {
+	fs=$1
+	fs_name=${target_prefix}_${fs}
+	run_infinishell "fs.snap.query source=$fs_name --grep=$snap_prefix --columns=created_at,name,lock_state --sort=-created_at"
+}
+	
+	
+validates() {
+	if [ ! -d $expose_dir ] ; then
+		echo "ERROR - Expose directory $expose_dir does not exist; aborting"
+		exit 1
+	fi
+	if [ ! -d $target_dir ] ;then 
+		echo "ERROR - Target directory $target_dir does not exist; aborting"
+		exit 4
+	fi
+	target_mounted=`check_fs_mounted $target_dir`
+	if [ $target_mounted -ne 1 ] ; then
+		echo "ERROR - Target directory $target_dir is not mounted ; aborting"
+		exit 5
+	fi
+
+	if [ ! -f "$init" -a "$use_cred_file" == "YES" ] ; then
+		echo "ERROR - No credentials file ; aborting"
+		exit 3
+	fi
+	d=`fuser $target_dir 2>/dev/null`
+	if [ ! -z $d ]; then
+    		echo "WARNING - open files on $target_dir"
+	fi
+	run_infinishell "pool.query pool=${pool} --columns=name,physical_total,physical_allocated,state,data_reduction "
+	pool_usage=`run_infinishell "pool.query name=${pool} --columns=physical_total,physical_allocated unit=block --grep=block" | sed 's/blocks//g' | awk -F, '{print ($2/$1)*100}'` 
+	pu=${pool_usage%.*}
+	if [ $pu -gt $pool_threshold ] ; then
+	   $print_cmd "WARNING Pool usage $pool_usage percent which exceeds the threshold of $pool_threshold"
+	fi
+	echo "validation completed"
+}
+create_delete_export() {
+	snap=$1
+	operation=$2
+	suffix=''
+	if [ "$operation" == "delete" ] ; then
+        	run_infinishell "fs.export.${operation} export_path=/${snap} --yes"
+        else
+        	run_infinishell "fs.export.${operation} fs=$snap export_path=/${snap} "
+	fi
+}
+expose() {
+	snap=$1
+	echo "Attempt to expose... creating a snapshot for the backup target"
+	create_snap $snap expose
+	create_delete_export ${snap}_EXPOSED create
+	write_enable_snap ${snap}
+	mount_umount_snap ${snap} mount
+	echo "please run \"rman catalog start with '${mount_dir}' \" to update RMAN catalog with the location of the new restore path. Then you can run the restore command (rman switch to copy)  and recover the database."
+	
+}
+unexpose() {
+    echo "Please approve unexpose - snapshot will be deleted Y|[N]"
+    read answer
+    if [ "$answer" != "Y" -a "$answer" != "y" ] ; then
+        echo "Operation aborted"
+        exit 9
+    fi
+    
+    snap=$1
+    mount_umount_snap ${snap}_EXPOSED umount
+    create_delete_export ${snap}_EXPOSED delete
+    delete_snap ${snap} delete
+}
+
+mount_umount_snap() {
+	export=$1
+	operation=$2
+	mount_dir=${expose_dir}/${export}
+	if [ ! -d $mount_dir ] ; then 
+		mkdir -p $mount_dir
+		if [ $? -ne 0 ] ; then
+		    echo "unable to create mount directory"
+		    exit 8
+		fi
+	fi
+	if [ "$os" == "SunOS" ] ; then
+	   echo "Implmenting Solaris mount options"
+	   opt="-F nfs -o $solaris_mount_options "
+	   #echo "command is $use_sudo mount  $nfs_ip:/${export} ${mount_dir} $opt"
+	if [ "$operation" == "mount" ] ; then
+        echo "mounting ${export} on ${mount_dir}"
+    else
+        opt=""
+    fi
+	$use_sudo mount $opt $nfs_ip:/${export} ${mount_dir} 
+	if [ $? -ne 0 ] ; then
+		    echo "unable to  mount directory"
+		    exit 9
+		fi
+    fi
+    if [ "$operation" == "umount" ] ; then
+       echo "umounting $mount_dir"
+        $use_sudo umount ${mount_dir}
+        if [ $? -ne 0 ] ; then
+         echo "ERROR unable to umount $mount_dir; exiting"
+            exit 5
+        fi    
+    fi
+}
+
+#validates
+if [ "$use_cred_file" == "YES" ] ; then
+p=`dec_pass $init`
+fi

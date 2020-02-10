@@ -1,0 +1,12 @@
+ibox='ibox2811'
+ibox_user='iweisman'
+nfs_ip='172.20.37.53'
+expose_dir=/INFINI/snaps
+target_dir=/INFINI/target
+script_dir=/export/home/dba/incre_merge/incre_merge
+snap_prefix='infinimerge'
+use_sudo="/usr/bin/sudo"
+target_prefix="BackupTarget_"
+pool="perf"
+pool_threshold=10
+mode=volume
