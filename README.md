@@ -1,8 +1,6 @@
-﻿## -------------------------------------------------
 
 ## InfiniMerge reference utility
 
-**(code is available in [Gitlab](https://git.infinidat.com/iweisman/incre_merge/tree/master)).**
 
 # infinimerge.sh
 
