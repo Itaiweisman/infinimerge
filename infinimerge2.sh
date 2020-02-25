@@ -50,20 +50,25 @@
 ### Notes
 #* validate can run as a pre-step for other options (create, expose or delete)
 #* other options (create, expose) must have an instance name and cannot run in conjunction
+log=`basename $0`.log
+echo >> ${log} 2>&1
+echo >> ${log} 2>&1
+echo >> ${log} 2>&1
+date >> ${log} 2>&1
+echo "Started " | tee -a ${log}
 os=`uname`
 if [ "$os" == "SunOS" ] ; then
    print_cmd="print"
 elif [ "$os" == "Linux" ] ; then
    print_cmd="printf"
 else
-    echo "Operating system isn't supported"
+    echo "Operating system isn't supported" | tee -a ${log}
     exit 200
 fi
 
-
 config="./config"
 if [ ! -f $config ] ; then
-  echo "config file couldn't found ; exiting"
+  echo "config file couldn't found ; exiting" | tee -a ${log}
   exit 100
 fi
 . $config
@@ -72,13 +77,13 @@ if [ "$mode" == "volume" -a "$os" == "Linux" ] ; then
 elif [ "$mode" == "filesystem" ] ; then
   func="./incre_merge2-filesystem"
 else 
-  $print_cmd "mode parameter is set incorrectly or selected mode not supported"
+  $print_cmd "mode parameter is set incorrectly or selected mode not supported" | tee -a ${log}
   exit 20
 fi
 if [ -f $func ] ; then
 .  $func
 else
-   echo "function file ($func)r does not exist ; exiting"
+   echo "function file ($func)r does not exist ; exiting" | tee -a ${log}
    exit 5
 fi
 #$print_cmd ok
@@ -126,7 +131,7 @@ case $key in
     -e|--expose)
     FS="$2"
     if [ -z "$FS" ] ; then
-       $print_cmd "expose option requires an instance name ; exiting "
+       $print_cmd "expose option requires an instance name ; exiting "| tee -a ${log}
        usage
        exit 4
        fi
@@ -138,7 +143,7 @@ case $key in
     -u|--unexpose)
     FS="$2"
     if [ -z "$FS" ] ; then
-       $print_cmd "unexpose option requires an instance name ; exiting "
+       $print_cmd "unexpose option requires an instance name ; exiting " | tee -a ${log}
        usage
        exit 4
        fi
@@ -154,7 +159,7 @@ case $key in
     shift # past argument
     shift # past value
     else
-        $print_cmd "retention must be provided as an integer " 
+        $print_cmd "retention must be provided as an integer " | tee -a ${log}
         usage 
         exit 3
     fi
@@ -162,7 +167,7 @@ case $key in
     -c|--capture)
     FS="$2"
     if [ -z "$FS" ] ; then
-       $print_cmd "capture option requires an instance name ; exiting"
+       $print_cmd "capture option requires an instance name ; exiting" | tee -a ${log}
        usage
        exit 4
        fi
@@ -174,7 +179,7 @@ case $key in
     -l|--list)
     FS="$2"
     if [ -z "$FS" ] ; then
-       $print_cmd "snap list option requires an instance name ; exiting "
+       $print_cmd "snap list option requires an instance name ; exiting "| tee -a ${log}
        usage
        exit 4
        fi
@@ -206,7 +211,7 @@ case $operation in
 	;;
      create)
      if [ "$set_retention" == "NO" ] ; then
-         echo "capture requires retention set "
+         echo "capture requires retention set "| tee -a ${log}
          usage
          exit 3
          fi
@@ -216,3 +221,6 @@ case $operation in
 	list_snaps $FS
         ;;
 esac
+
+
+

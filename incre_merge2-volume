@@ -1,5 +1,4 @@
 #!/usr/bin/sh
-
 infinishell='/usr/bin/infinishell'
 infinihost='/usr/bin/infinihost'
 
@@ -33,9 +32,9 @@ run_infinihost() {
 		mode=""
 	fi
 
-	eval "$mode $infinihost $cmd"
+	eval "$mode $infinihost $cmd ">> $log 2>&1
 	if [ $? -ne 0 ] ;then
-		echo "infinihost command failed, aborting"
+		echo "infinihost command failed, aborting" | tee -a ${log} 
 		exit 3
 	fi
 }
@@ -43,9 +42,9 @@ run_infinihost() {
 run_infinishell() {
 	command=$@
 	cmd="$infinishell $ibox -c \"$command\" $creds --csv --no-paging --yes"
-	eval $cmd
+	eval $cmd >> $log 2>&1
 	if [ $? -ne 0 ] ;then
-		echo "infinishell command failed, aborting"
+		echo "infinishell command failed, aborting" | tee -a ${log}
 		exit 2
 	fi
 }
@@ -80,34 +79,34 @@ list_snaps() {
 	
 validates() {
 	if [ ! -d $expose_dir ] ; then
-		echo "ERROR - Expose directory $expose_dir does not exist; aborting"
+		echo "ERROR - Expose directory $expose_dir does not exist; aborting" | tee -a ${log}
 		exit 1
 	fi
 	if [ ! -d $target_dir ] ;then 
-		echo "ERROR - Target directory $target_dir does not exist; aborting"
+		echo "ERROR - Target directory $target_dir does not exist; aborting" | tee -a ${log}
 		exit 4
 	fi
 	target_mounted=`check_fs_mounted $target_dir`
 	if [ $target_mounted -ne 1 ] ; then
-		echo "ERROR - Target directory $target_dir is not mounted ; aborting"
+		echo "ERROR - Target directory $target_dir is not mounted ; aborting" | tee -a ${log}
 		exit 5
 	fi
 
 	if [ ! -f "$init" -a "$use_cred_file" == "YES" ] ; then
-		echo "ERROR - No credentials file ; aborting"
+		echo "ERROR - No credentials file ; aborting" | tee -a ${log}
 		exit 3
 	fi
 	d=`fuser $target_dir 2>/dev/null`
 	if [ ! -z $d ]; then
-    		echo "WARNING - open files on $target_dir"
+    		echo "WARNING - open files on $target_dir" | tee -a ${log}
 	fi
 	run_infinishell "pool.query pool=${pool} --columns=name,physical_total,physical_allocated,state,data_reduction "
 	pool_usage=`run_infinishell "pool.query name=${pool} --columns=physical_total,physical_allocated unit=block --grep=block" | sed 's/blocks//g' | awk -F, '{print ($2/$1)*100}'` 
 	pu=${pool_usage%.*}
 	if [ $pu -gt $pool_threshold ] ; then
-	   $print_cmd "WARNING Pool usage $pool_usage percent which exceeds the threshold of $pool_threshold"
+	   $print_cmd "WARNING Pool usage $pool_usage percent which exceeds the threshold of $pool_threshold" | tee -a ${log}
 	fi
-	echo "validation completed"
+	echo "validation completed" | tee -a ${log}
 }
 
 expose() {
@@ -115,14 +114,14 @@ expose() {
 	snap_name=${snap}_EXPOSED
     mount_dir=${expose_dir}/${snap_name}
     run_infinihost sudo "snapshot expose ${snap} --mount=${mount_dir} --name=${snap_name} --yes"
-	echo " please run \"rman catalog start with '${mount_dir}' \" to update RMAN catalog with the location of the new restore path. Then you can run the restore command (rman switch to copy)  and recover the database."
+	echo " please run \"rman catalog start with '${mount_dir}' \" to update RMAN catalog with the location of the new restore path. Then you can run the restore command (rman switch to copy)  and recover the database." | tee -a ${log}
 	
 }
 unexpose() {
     echo "Please approve unexpose - snapshot will be deleted Y|[N]"
     read answer
     if [ "$answer" != "Y" -a "$answer" != "y" ] ; then
-        echo "Operation aborted"
+        echo "Operation aborted" | tee -a ${log}
         exit 9
     fi
     
