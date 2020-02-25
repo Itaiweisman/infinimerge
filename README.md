@@ -1,8 +1,3 @@
-﻿## -------------------------------------------------
-
-## InfiniMerge reference utility
-
-**(code is available in [Gitlab](https://git.infinidat.com/iweisman/incre_merge/tree/master)).**
 
 # infinimerge.sh
 
@@ -219,4 +214,3 @@ _python3 snapc.py -m delete_  - deletes backup/snapshots that are expired
 
   
 
-### TBD....
