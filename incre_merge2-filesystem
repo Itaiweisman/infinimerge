@@ -1,16 +1,6 @@
 #!/usr/bin/sh
-#ibox='ibox2811'
-#ibox_user='iweisman'
-#lock_duration=1hours
 infinishell='/usr/bin/infinishell'
-#expose_dir=/INFINI/snaps
-#target_dir=/INFINI/target
-#snap_prefix='infinimerge'
 ts=`date +%H%M%d%m%Y`
-#nfs_ip='172.20.37.53'
-init=".init"
-use_cred_file="NO"
-#solaris_mount_options="rw,bg,hard,nointr,rsize=32768,wsize=32768,proto=tcp,noac,vers=3,forcedirectio"
 solaris_mount_options="rw,bg,hard,nointr,rsize=32768,wsize=32768,proto=tcp,actimeo=0,vers=3,timeo=600,llock"
 linux_mount_options="rw,bg,hard,nointr,rsize=32768,wsize=32768,tcp,actimeo=0,vers=3,timeo=600,nolock"
 
@@ -28,26 +18,18 @@ write_enable_snap() {
     snap=$1
     run_infinishell "fs.snap.write_enable snap=$snap"
 }
-dec_pass() {
-	file=$1
-	dec=`cat $file | base64 --decode`
-	$print_cmd $dec
-}
+
 run_infinishell() {
 	command=$@
-	if [ "$use_cred_file" == "YES" ] ; then
-	    creds="--user $ibox_user --password $p"
-	
-	else 
-	    creds=""
-	fi
-	cmd="$infinishell $ibox -c \"$command\" $creds --csv --no-paging --yes"
-	eval $cmd 2>&1 | tee -a ${log} 
+	cmd="$infinishell -c \"$command\"  --csv --no-paging --yes"
+	eval $cmd 2>&1 | tee -a ${log}
 	if [ $? -ne 0 ] ;then
 		echo "infinishell command failed, aborting" | tee -a ${log}
 		exit 2
 	fi
 }
+
+
 create_snap() {
 	fs=$1
 	lock=$2
@@ -58,7 +40,6 @@ create_snap() {
 		snap_name=${fs}_EXPOSED
 		fs_name=$fs
 	else
-	    #if [ ! -z "${lock_duration}" ] ; then 
 	    if [ $lock == "YES" ] ; then
 		suffix="lock_duration=${retention}days" ; fi
 		snap_name=${snap_prefix}_${fs}_${ts}
@@ -102,10 +83,6 @@ validates() {
 		exit 5
 	fi
 
-	if [ ! -f "$init" -a "$use_cred_file" == "YES" ] ; then
-		echo "ERROR - No credentials file ; aborting" | tee -a ${log}
-		exit 3
-	fi
 	d=`fuser $target_dir 2>/dev/null`
 	if [ ! -z $d ]; then
     		echo "WARNING - open files on $target_dir" | tee -a ${log}
@@ -167,12 +144,12 @@ mount_umount_snap() {
 	   echo "Implmenting Solaris mount options" | tee -a ${log}
 	   opt="-F nfs -o $solaris_mount_options "
 	   #echo "command is $use_sudo mount  $nfs_ip:/${export} ${mount_dir} $opt"
-	if [ "$os" == "Linux" ] ; then
-	   echo "Implmenting Linux mount options" | tee -a ${log}
+	elif [ "$os" == "Linux" ] ; then
+	   echo "Implementing Linux mount options" | tee -a ${log}
 	   opt="-o $linux_mount_options "
 	else
            opt=""
-        fi
+    	fi
 	if [ "$operation" == "mount" ] ; then
         echo "mounting ${export} on ${mount_dir}"
 	$use_sudo mount $opt $nfs_ip:/${export} ${mount_dir} >> ${log} 2>&1
@@ -191,7 +168,3 @@ mount_umount_snap() {
     fi
 }
 
-#validates
-if [ "$use_cred_file" == "YES" ] ; then
-p=`dec_pass $init`
-fi
