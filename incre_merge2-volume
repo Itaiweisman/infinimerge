@@ -3,8 +3,6 @@ infinishell='/usr/bin/infinishell'
 infinihost='/usr/bin/infinihost'
 
 ts=`date +%H%M%d%m%Y`
-init=".init"
-use_cred_file="NO"
 
 
 check_fs_mounted() {
@@ -25,14 +23,14 @@ run_infinihost() {
 	use_sudo=$1
 	shift
 	command=$@
-	cmd="$command --system=$ibox"
+	cmd="$command"
 	if [ "$use_sudo" == "sudo" ] ; then
 		mode="sudo"
 	else
 		mode=""
 	fi
 
-	eval "$mode $infinihost $cmd ">> $log 2>&1
+	eval "$mode $infinihost $cmd " 2>&1 | tee -a ${log} 
 	if [ $? -ne 0 ] ;then
 		echo "infinihost command failed, aborting" | tee -a ${log} 
 		exit 3
@@ -41,8 +39,8 @@ run_infinihost() {
 
 run_infinishell() {
 	command=$@
-	cmd="$infinishell $ibox -c \"$command\" $creds --csv --no-paging --yes"
-	eval $cmd >> $log 2>&1
+	cmd="$infinishell $ibox -c \"$command\" --csv --no-paging --yes"
+	eval $cmd 2>&1 | tee -a ${log} 
 	if [ $? -ne 0 ] ;then
 		echo "infinishell command failed, aborting" | tee -a ${log}
 		exit 2
@@ -92,10 +90,6 @@ validates() {
 		exit 5
 	fi
 
-	if [ ! -f "$init" -a "$use_cred_file" == "YES" ] ; then
-		echo "ERROR - No credentials file ; aborting" | tee -a ${log}
-		exit 3
-	fi
 	d=`fuser $target_dir 2>/dev/null`
 	if [ ! -z $d ]; then
     		echo "WARNING - open files on $target_dir" | tee -a ${log}
@@ -103,7 +97,7 @@ validates() {
 	run_infinishell "pool.query pool=${pool} --columns=name,physical_total,physical_allocated,state,data_reduction "
 	pool_usage=`run_infinishell "pool.query name=${pool} --columns=physical_total,physical_allocated unit=block --grep=block" | sed 's/blocks//g' | awk -F, '{print ($2/$1)*100}'` 
 	pu=${pool_usage%.*}
-	if [ $pu -gt $pool_threshold ] ; then
+	if [[ $pu -gt $pool_threshold ]] ; then
 	   $print_cmd "WARNING Pool usage $pool_usage percent which exceeds the threshold of $pool_threshold" | tee -a ${log}
 	fi
 	echo "validation completed" | tee -a ${log}
