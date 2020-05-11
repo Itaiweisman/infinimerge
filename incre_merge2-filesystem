@@ -42,7 +42,8 @@ run_infinishell() {
 	    creds=""
 	fi
 	cmd="$infinishell $ibox -c \"$command\" $creds --csv --no-paging --yes"
-	eval $cmd >> $log 2>&1
+	#eval $cmd >> $log 2>&1
+	eval $cmd 
 	if [ $? -ne 0 ] ;then
 		echo "infinishell command failed, aborting" | tee -a ${log}
 		exit 2
