@@ -1,9 +1,6 @@
 #!/usr/bin/sh
 infinishell='/usr/bin/infinishell'
 ts=`date +%H%M%d%m%Y`
-#solaris_mount_options="rw,bg,hard,nointr,rsize=32768,wsize=32768,proto=tcp,actimeo=0,vers=3,timeo=600,llock"
-#linux_mount_options="rw,bg,hard,nointr,rsize=32768,wsize=32768,tcp,actimeo=0,vers=3,timeo=600,nolock"
-
 
 #os-specific start
 if [ "$os" == "SunOS" ] ; then
@@ -199,16 +196,7 @@ mount_umount_snap()
 			exit 8
 		fi
 	fi
-#	if [ "$os" == "SunOS" ] ; then
-#	   echo "Implementing Solaris mount options" | tee -a ${log}
-#	   opt="-F nfs -o $solaris_mount_options "
-#	   #echo "command is $use_sudo mount  $nfs_ip:/${export} ${mount_dir} $opt"
-#	elif [ "$os" == "Linux" ] ; then
-#	   echo "Implementing Linux mount options" | tee -a ${log}
-#	   opt="-o $linux_mount_options "
-#	else
-#          opt=""
-#	fi
+
 	if [ "$operation" == "mount" ] ; then
 		echo "mounting ${export} on ${mount_dir}"
 		$use_sudo mount $os_mount_options $nfs_ip:/${export} ${mount_dir} >> ${log} 2>&1	
@@ -216,8 +204,8 @@ mount_umount_snap()
 			echo "unable to  mount directory" | tee -a ${log}
 			exit 9
 		fi
-    fi
-    if [ "$operation" == "umount" ] ; then
+	fi
+	if [ "$operation" == "umount" ] ; then
 		echo "umounting $mount_dir"
 		$use_sudo umount ${mount_dir} >> ${log} 2>&1
 		if [ $? -ne 0 ] ; then
