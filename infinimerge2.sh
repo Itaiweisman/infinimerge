@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/sh
 #
 # incre_merge
 ## utility to handle incremental merge backups target
@@ -59,7 +59,7 @@ echo "Started " | tee -a ${log}
 os=`uname`
 if [ "$os" == "SunOS" ] ; then
    print_cmd="print"
-elif [ "$os" == "Linux" ] ; then
+elif [ "$os" == "Linux" -o "$os" == "AIX" ] ; then
    print_cmd="printf"
 else
     echo "Operating system isn't supported" | tee -a ${log}
@@ -93,7 +93,8 @@ LOCK="NO"
 POSITIONAL=()
 functional=0
 non_functional=0
-usage() {
+usage() 
+{
 	echo "usage:"
 	echo "`basename $0`"
 	echo " -v|--validates "
@@ -221,6 +222,5 @@ case $operation in
 	list_snaps $FS
         ;;
 esac
-
 
 
