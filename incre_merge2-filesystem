@@ -19,7 +19,8 @@ check_fs_mounted()
 {
 dir=$1
 
-if [ `stat -c%d "$dir"` != `stat -c%d "$dir/.."` ]; then
+#if [ `stat -c%d "$dir"` != `stat -c%d "$dir/.."` ]; then
+if [ `mount | grep -i nfs | grep -c "$dir"` = 1 ]; then
 
 
 # FS Mounted
