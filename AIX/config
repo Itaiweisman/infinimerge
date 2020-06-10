@@ -1,0 +1,12 @@
+ibox='ibox2233'
+ibox_user='oracle'
+nfs_ip='172.31.32.218'
+expose_dir=/INFINI/snaps
+target_dir=/INFINI/target
+script_dir=/u01/app/oracle/software/incre_merge-master
+snap_prefix='infinimerge'
+use_sudo="/usr/bin/sudo"
+target_prefix="BackupTarget"
+pool="oracle"
+pool_threshold=10
+mode=filesystem
