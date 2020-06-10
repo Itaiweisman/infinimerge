@@ -1,5 +1,5 @@
 
-# infinimerge.sh
+# infinimerge2.sh
 
 A backup and restore utility (reference customized scripts) for very large Oracle databases (tens to thousands of TB) that leverages Oracle RMAN incremental merge technology that can reduce the backup time by a factor of x30 and the restore time by a factor of x100. The utility manages InfiniBox/InfiniGuard snapshots to capture RMAN Incremental Merge backups, provides block-level-incremental-forever backups and near-instant switch to copy restore.
 
@@ -24,24 +24,24 @@ A backup and restore utility (reference customized scripts) for very large Oracl
 
 InfiniMerge reference utility consists of 2 customized scripts:
 
--   _**infinimerge.sh**_  - capture and restore InfiniBox snapshots that contain Oracle Incremental Merge backup files.
--   _**snapc.py**_  - backups/snapshots lifecycle management (validate, present, delete expired).
+-   _**infinimerge2.sh**_  - capture and restore InfiniBox snapshots that contain Oracle Incremental Merge backup files.
+-   _**snapc2.py**_  - backups/snapshots lifecycle management (validate, present, delete expired).
 
 ## **InfiniMerge backup Manager - Utility to handle incremental merge backups target**
 
 ### Execution
 
-./infinimerge.sh -h|–help # Display usage
+./infinimerge2.sh -h|–help # Display usage
 
-./infinimerge.sh –v|–validate # Check settings
+./infinimerge2.sh –v|–validate # Check settings
 
-./infinimerge.sh -c|--capture {instance} –r{DAYS} [-L] # Take a snap for the given time, SnapLock option
+./infinimerge2.sh -c|--capture {instance} –r{DAYS} [-L] # Take a snap for the given time, SnapLock option
 
-./infinimerge.sh -l|--list {instance} # Show snapshots
+./infinimerge2.sh -l|--list {instance} # Show snapshots
 
-./infinimerge.sh -e|--expose {snapshot} # Take a Snap-of-snap and Expose it to the host
+./infinimerge2.sh -e|--expose {snapshot} # Take a Snap-of-snap and Expose it to the host
 
-./infinimerge.sh -u|--unexpose {_snapshotOfInstance_} # unmount and delete the Snap-of-snap
+./infinimerge2.sh -u|--unexpose {_snapshotOfInstance_} # unmount and delete the Snap-of-snap
 
 ### Options
 
@@ -85,25 +85,25 @@ unexposes a snapshot - umounts, deletes the export and the snapshot.
 
 -   Create a dedicated pool on the InfiniGuard
     
-    -   pool.create name=InfiniMerge physical_capacity=500TB ssd_cache=no compression=yes emergency_buffer=UNLIMITED
+    -   pool.create name=infinimerge physical_capacity=500TB ssd_cache=no compression=yes emergency_buffer=UNLIMITED
         
 -   Create a new user on the InfiniGuard as a pool-admin and assign it to the relevant pool
     
-    -   user.create role=POOL_ADMIN name=InfiniMerge password=InfiniMerge email=a.a@[a.com](http://a.com/)
-    -   pool.add_admin user=InfiniMerge pool=InfiniMerge
+    -   user.create role=POOL_ADMIN name=infinimerge password=InfiniMerge email=a.a@[a.com](http://a.com/)
+    -   pool.add_admin user=infinimerge pool=infinimerge
         
 -   Set the NetworkSpace (NAS/iSCSI) or create IBOX host (SAN)
     
--   Create volume (Block mode) or filesystem (Filesystem mode), call it {snap_prefix}_{DB_NAME} (example: InfiniMerge_orcl)
-    -   fs.create name=InfiniMerge_orcl size=200TB pool=InfiniMerge snapshot_directory_accessible=yes thin=yes ssd_cache=no compression=yes
-    -   vol.create name=InfiniMerge_orcl size=200TB pool=InfiniMerge thin=yes ssd_cache=no compression=yes
+-   Create volume (Block mode) or filesystem (Filesystem mode), call it {snap_prefix}_{DB_NAME} (example: BackupTarget_orcl)
+    -   fs.create name=BackupTarget_orcl size=200TB pool=infinimerge snapshot_directory_accessible=yes thin=yes ssd_cache=no compression=yes
+    -   vol.create name=BackupTarget_orcl size=200TB pool=infinimerge thin=yes ssd_cache=no compression=yes
 -   Create the host (Block mode only) and set the WWN initiators to it
     -   host.create name=<DB_SERVER_NAME>
     -   host.add_port host=<DB_SERVER_NAME> port=<Initiator_1 WWN>,<Initiator_2 WWN>,<Initiator_3 WWN>...
         
 -   Map (Block mode) or export (Filesystem mode) the volume/filesystem to the host
-    -   fs.export.create fs=InfiniMerge_orcl export_path=/InfiniMerge_orcl
-    -   vol.map host=<DB_SERVER_NAME> vol=InfiniMerge_orcl  
+    -   fs.export.create fs=BackupTarget_orcl export_path=/BackupTarget_orcl
+    -   vol.map host=<DB_SERVER_NAME> vol=BackupTarget_orcl  
           
         
 
@@ -116,7 +116,7 @@ unexposes a snapshot - umounts, deletes the export and the snapshot.
         
         -   _infinishell --write-default-config_
             
-        -   edit the `~/.infinidat``/infinishell/infinishellrc` file and replace
+        -   edit the `~/.infinidat/infinishell/infinishellrc` file and replace
             
             -   **username** with ibox username
                 
@@ -138,17 +138,17 @@ unexposes a snapshot - umounts, deletes the export and the snapshot.
     -   Set the configuration file - On the directory where infinimerge utility is located, edit the "./config" file (should be aligned with the configuration above)
     -   nfs_ip='172.20.37.53' --> replace with NAS network space address (for NAS option only)
 
--   -   target_dir=/InfiniMerge/target --> target directory for backups
+-   -   target_dir=/INFINI/target --> target directory for backups
         
-    -   expose_dir=/InfiniMerge/snaps --> directory for mounting snaps
+    -   expose_dir=/INFINI/snaps --> directory for mounting snaps
         
     -   use_sudo="/usr/bin/sudo" --> path for sudo
         
-    -   snap_prefix=‘InfiniMerge' --> an prefix to add to newly created snaps
+    -   snap_prefix=infinimerge' --> an prefix to add to newly created snaps
         
-    -   target_prefix="InfiniMerge" --> prefix for FS name based on instnace name
+    -   target_prefix="BackupTarget" --> prefix for FS name based on instance name
         
-    -   pool=“InfiniMerge" --> pool to check for free space before alerting the user
+    -   pool=inc_merge" --> pool to check for free space before alerting the user
         
     -   mode=filesystem --> connectivity mode – filesystem or block
         
@@ -167,8 +167,8 @@ unexposes a snapshot - umounts, deletes the export and the snapshot.
     -   infinihost volume provision <vol_sizr> --name=BackupTarget_<$ORACLE_SID --thin=yes --filesystem=ext3 --pool=<pool_name> --mount=<target_dir> --system=<ibox> --yes
     -   infinihost volume mount....
 -   For File mode, Mount the InfiniGuard volume or NFS-share to the local filesystem
-    -   Linux: mount (-o nolock) <nfs_ip>:/InfiniMerge_orcl /InfiniMerge/target
-    -   Solaris: mount -F nfs -o rw,bg,hard,nointr,rsize=32768,wsize=32768,proto=tcp,noac,vers=3,forcedirectio <nfs_ip>:InfiniMerge_orcl /InfiniMerge/target
+    -   Linux: mount (-o nolock) <nfs_ip>:/BackupTarget_orcl /INFINI/target
+    -   Solaris: mount -F nfs -o rw,bg,hard,nointr,rsize=32768,wsize=32768,proto=tcp,noac,vers=3,forcedirectio <nfs_ip>:BackupTarget_orcl /INFINI/target
 -   Add the mount to /etc/fstab (Solaris - /etc/vfstab)
     
 
@@ -182,8 +182,8 @@ If a recovery is needed, it can be recovered from the snapshot
 
 The following are the required steps to recover the database and performed on the database server
 
--   infinimerge -l [ORACLE_INSTANCE] #Choose the snapshot that was taken at the requested time
--   infinimerge -e [SNAPSHOT_NAME]
+-   infinimerge2.sh -l [ORACLE_INSTANCE] #Choose the snapshot that was taken at the requested time
+-   infinimerge2.sh -e [SNAPSHOT_NAME]
 -   RMAN> catalog start with '<path to the exposed snapshot>'
 -   RMAN> switch database to copy;
 -   SQL> select file# , fuzzy, checkpoint_time, checkpoint_change# from v$datafile_header; #Check the most updated [SCN] under the CHECKPOINT_CHANGE column
