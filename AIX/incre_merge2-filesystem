@@ -19,8 +19,8 @@ check_fs_mounted()
 {
 dir=$1
 
-if [ `stat -c%d "$dir"` != `stat -c%d "$dir/.."` ]; then
-
+#if [ `stat -c%d "$dir"` != `stat -c%d "$dir/.."` ]; then
+if [ `mount | grep -i nfs | grep -c "$dir"` = 1 ]; then
 
 # FS Mounted
 	$print_cmd 1
@@ -39,7 +39,7 @@ run_infinishell()
 {
 	set -o pipefail
 	command=$@
-	cmd="$infinishell -c \"$command\"  --csv --no-paging --yes"
+	cmd="$infinishell $ibox -c \"$command\"  --csv --no-paging --yes"
 	eval $cmd 2>&1 | tee -a ${log}
 	if [ $? -ne 0 ] ;then
 		echo "infinishell command failed, aborting" | tee -a ${log}
