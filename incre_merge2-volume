@@ -55,6 +55,8 @@ create_snap() {
 	volume=$1
 	lock=$2
 	volume_name=${target_prefix}_${volume}
+	snap_name=${snap_prefix}_${volume}_${ts}
+	run_infinihost sudo snapshot create ${volume_name}  ${snap_name}
 	operation=$2
 	if [ "$operation" == "expose" ] ; then
 		suffix=''
@@ -62,11 +64,12 @@ create_snap() {
 		fs_name=$fs
 	else
 	if [ $lock == "YES" ] ; then
-		suffix="lock_duration=${retention}days" ; fi
-		snap_name=${snap_prefix}_${volume}_${ts}
+		suffix="lock_duration=${retention}days" ;
+		run_infinishell "vol.snap.secure_lock snap=${snap_name} lock_duration=${retention}days" 
 	fi
-	run_infinihost sudo snapshot create ${volume_name}  ${snap_name}
-	run_infinishell "vol.snap.secure_lock snap=${snap_name} lock_duration=${retention}days"
+	fi
+
+	
 	set_metadata ${snap_name} host.created_by infinimerge
 	if [ "$set_retention" == "YES" ]; then
 	    set_metadata ${snap_name} retention ${retention}
