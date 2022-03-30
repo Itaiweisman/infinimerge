@@ -116,7 +116,7 @@ validates()
 	ibox_fs_exists=`run_infinishell  "fs.export.query fs=$current_fs export_path=/$current_fs" | wc -l`;
 	ORA_SID=`echo $ORACLE_SID`
 	echo "Mounted  NFS target = $current_mount_point"
-	echo "Expected NFS target = $nfs_ip:/$target_prefix"_"$ORA_SID"
+	echo "Expected NFS target = "$nfs_ip:/$target_prefix"_"$ORA_SID""
 	#echo "NFS IP listed in config file = $nfs_ip"
 	#echo "Mounted  NFS IP = $current_nfs_ip"
 	#echo "Currently mounted target FS = $current_fs"
